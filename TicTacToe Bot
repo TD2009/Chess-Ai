@@ -1,0 +1,161 @@
+import math
+import chess
+import time
+
+def evaluate_board(board):
+    # Piece values
+    piece_values = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3.5, chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 100}
+    evaluation = 0
+
+    # Piece values and piece square tables
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece:
+            value = piece_values[piece.piece_type]
+            if piece.color == chess.WHITE:
+                evaluation += value
+            else:
+                evaluation -= value
+
+            # Hanging pieces
+            if board.is_attacked_by(not piece.color, square):
+                if len(board.attackers(not piece.color, square)) <= len(board.attackers(piece.color, square)):
+                    continue
+                if piece.color == chess.WHITE:
+                    evaluation -= value
+                else:
+                    evaluation += value
+    """
+    # Mobility
+    mobility = len(list(board.legal_moves))
+    if board.turn == chess.WHITE:
+        evaluation += mobility / 10
+    else:
+        evaluation -= mobility / 10
+
+    # King safety
+    king_safety = [0, 0]
+    for color in [chess.WHITE, chess.BLACK]:
+        king_square = board.king(color)
+        if king_square:
+            king_safety[color] = sum(1 for square in chess.SQUARES if board.is_attacked_by(not color, square))
+    evaluation += (king_safety[chess.WHITE] - king_safety[chess.BLACK]) / 2
+    """
+    # Control of the center
+    center_control = [0, 0]
+    center_squares = [chess.D4, chess.E4, chess.D5, chess.E5]
+    for color in [chess.WHITE, chess.BLACK]:
+        center_control[color] = sum(1 for square in center_squares if board.is_attacked_by(color, square))
+    evaluation += (center_control[chess.WHITE] - center_control[chess.BLACK]) / 2
+
+    return evaluation
+
+
+                   
+def minimax(board, depth, alpha, beta, maximizing_player):
+    if depth == 0 or board.is_game_over():
+        return evaluate_board(board)
+    if maximizing_player:
+        max_eval = -float('inf')
+        for move in board.legal_moves:
+            board.push(move)
+            eval = minimax(board, depth-1, alpha, beta, False)
+            board.pop()
+            max_eval = max(max_eval, eval)
+            alpha = max(alpha, eval)
+            if beta <= alpha:
+                break
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for move in board.legal_moves:
+            board.push(move)
+            eval = minimax(board, depth-1, alpha, beta, True)
+            board.pop()
+            min_eval = min(min_eval, eval)
+            beta = min(beta, eval)
+            if beta <= alpha:
+                break
+        return min_eval
+
+def find_best_move(board):
+    global Time_For_Bot
+    best_move = None
+    best_eval = -float('inf')
+   
+    start_time = time.time()
+   
+    for move in board.legal_moves:
+        board.push(move)
+        eval = minimax(board, 3, -float('inf'), float('inf'), False)
+        board.pop()
+       
+        if time.time() - start_time > Time_For_Bot: break
+       
+        if eval > best_eval:
+            best_eval = eval
+            best_move = move
+           
+    return best_move
+
+def bot_vs_bot():
+    board = chess.Board()
+   
+    game_history = []
+   
+    while not board.is_game_over():
+        move = find_best_move(board)
+       
+        game_history.append(board.san(move))
+
+        print(board.san(move))
+       
+        board.push(move)
+
+        print(board)
+               
+    print("Game history:", game_history)
+
+def human_vs_bot():
+    board = chess.Board()
+   
+    game_history = []
+   
+    while not board.is_game_over():
+        if board.turn == chess.WHITE:
+            move_san = input("Enter your move (e.g. e4): ")
+           
+            try:
+                move = board.parse_san(move_san)
+               
+                game_history.append(move_san)
+               
+                print(move_san)
+
+                board.push(move)
+
+                print(board)
+               
+               
+            except ValueError:
+                print("Invalid input!")
+               
+                continue
+           
+        else:
+            move = find_best_move(board)
+           
+            game_history.append(board.san(move))
+           
+            print(board.san(move))
+           
+            board.push(move)
+
+            print(board)
+                      
+x=input('1. BOT VS BOT \n2. HUMAN VS BOT\n')
+Time_For_Bot = int(input("Time the bot is allowed to think for in seconds (Longer amount = Better play USUALLY): "))
+
+if x=='1': bot_vs_bot()
+
+else: human_vs_bot()
